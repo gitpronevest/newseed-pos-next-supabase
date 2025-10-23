@@ -1,14 +1,29 @@
 flowchart TD
-  Start[Landing Page]
-  SignUpPage[Sign Up Page]
-  SignInPage[Sign In Page]
-  AuthAPI[Authentication API Endpoint]
-  DashboardPage[Dashboard Page]
-  Start -->|Select Sign Up| SignUpPage
-  Start -->|Select Sign In| SignInPage
-  SignUpPage -->|Submit Credentials| AuthAPI
-  SignInPage -->|Submit Credentials| AuthAPI
-  AuthAPI -->|Success| DashboardPage
-  AuthAPI -->|Error| SignUpPage
-  AuthAPI -->|Error| SignInPage
-  DashboardPage -->|Click Logout| Start
+    Start[Start] --> SignIn[Sign in]
+    SignIn --> AuthCheck{Auth Successful?}
+    AuthCheck -->|Yes| Dashboard[Dashboard]
+    AuthCheck -->|No| SignIn
+    Dashboard --> MenuSelection{Select Action}
+    MenuSelection -->|Open Shift| OpenShift[Open Shift]
+    MenuSelection -->|Manage Products| ProductMgmt[Product Management]
+    MenuSelection -->|POS Interface| POSInterface[POS Interface]
+    MenuSelection -->|View Reports| Reports[Reports]
+    OpenShift --> Dashboard
+    ProductMgmt --> ProdCats[Manage Categories]
+    ProductMgmt --> OptionGroups[Manage Option Groups]
+    ProductMgmt --> Products[Manage Products]
+    ProdCats --> Dashboard
+    OptionGroups --> Dashboard
+    Products --> Dashboard
+    POSInterface --> CategorySelect[Select Category]
+    CategorySelect --> AddToCart[Add Product to Cart]
+    AddToCart --> Payment[Open Payment Dialog]
+    Payment --> ProcessPayment[Process Payment]
+    ProcessPayment --> Receipt[Generate Receipt]
+    Receipt --> Dashboard
+    Reports --> TransHistory[Transaction History]
+    Reports --> ShiftHistory[Shift History]
+    TransHistory --> Dashboard
+    ShiftHistory --> Dashboard
+    Dashboard --> SignOut[Sign out]
+    SignOut --> End[End]

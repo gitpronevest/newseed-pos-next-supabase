@@ -2,40 +2,56 @@
 
 ## Onboarding and Sign-In/Sign-Up
 
-When a new visitor arrives at the application’s root URL, they land on a welcome page that offers clear buttons or links to either create an account or sign in. Clicking on the “Sign Up” link takes the visitor to a registration page where they enter their email address and choose a password. Once they submit the form, the application sends a POST request to the authentication API endpoint, which handles password hashing and user creation. If registration succeeds, the new user is automatically signed in and redirected to the dashboard. If there are validation errors, such as a password that is too short or an email already in use, the form reappears with inline messages explaining what must be corrected.
+When a brand-new user first visits the application, they arrive at the landing page hosted at the root domain. This page presents a welcome message and a prominent link to the sign-in page. If no admin account exists, the user is invited to create one by clicking a link labeled “Sign Up.” On the sign-up page, the user enters their email address, chooses a secure password, and submits the form. The system uses Supabase Auth under the hood to register the user and send a confirmation email. Once the user confirms their email and completes the registration, they are redirected to the sign-in page.
 
-For returning users, clicking the “Sign In” link from the welcome page or from a persistent header link opens the login form. They input their email and password, and upon submission the app sends a request to the same authentication API with login credentials. A successful login leads directly to the dashboard. If the credentials are invalid, the page reloads with a clear error message prompting the user to try again.
-
-Signing out is available from within the dashboard via a logout button in the main navigation or header. When clicked, the application clears the user’s session or token, and then navigates back to the welcome page. Currently, there is no built-in password recovery or reset flow in this version, so users who forget their password are prompted to contact support for assistance.
+To sign in, the admin enters their registered email and password on the sign-in page. Upon successful authentication, the admin is brought into the protected dashboard area. A “Forgot Password” link on the sign-in page allows the admin to recover a lost password. Clicking that link prompts the user for their email, sends a reset link via Supabase Auth, and then lets the admin choose a new password on a secure reset page. Signing out is handled via a “Sign Out” option in the profile menu, which terminates the session and redirects the user back to the sign-in page.
 
 ## Main Dashboard or Home Page
 
-After authentication, the user lands on the dashboard, which serves as the main home page. The dashboard is wrapped in a layout that displays a header bar and a sidebar navigation tailored for logged-in users. The header bar typically shows the application’s logo on the left and a Logout link on the right. The sidebar sits on the left side of the screen and may contain links back to the dashboard’s main panel or to future features.
+After signing in, the admin lands on the main dashboard at `/dashboard`. The interface presents a persistent sidebar on the left with navigation links for Shift Management, POS, Products, Categories, Options, Reports, and Transactions. At the top, a header displays the application title, a toggle for dark or light theme, and a profile menu. The central area of the dashboard initially shows the Shift Management view. If no shift is active, an “Open Shop” button appears. If a shift is already open, real-time statistics for total sales and transaction count are displayed alongside a “Close Shop” button.
 
-The central area of the dashboard page displays data pulled from a static JSON file. This content might appear in cards or tables to give users a quick overview of information. All styling for this section comes from a dedicated theme stylesheet to keep the look consistent. Users can click items or links here, but those actions are placeholders for future dynamic data features.
-
-From this dashboard view, users may revisit the welcome page or any other main area by selecting navigation items in the sidebar or header. The layout ensures that the logout link remains accessible at all times, and that the user cannot leave the authenticated area without signing out manually or having their session expire.
+The sidebar links allow the admin to move seamlessly to other modules. Hovering over a link highlights it, and clicking it loads the new page in the main content area without reloading the entire layout. The header and sidebar remain present at all times, providing a consistent frame for navigation.
 
 ## Detailed Feature Flows and Page Transitions
 
-When a visitor lands on the root page, JavaScript on the client reads the route and displays either the welcome interface or automatically redirects them to the dashboard if a valid session exists. For new user registration, the user clicks the Sign Up link and is taken to the sign-up page. The sign-up form collects email and password fields, and on submission it triggers a client-side POST to the API route. Once the API responds with success, the client redirects the user to the dashboard page.
+### Shift Management Flow
 
-Returning users choose the Sign In link and arrive at the sign-in page, which offers the same fields as the sign-up page but is wired to authenticate rather than create a new account. On form submit, the user sees a loading indication until the API confirms valid credentials. If successful, the client pushes the dashboard route and loads the dashboard layout and content.
+On the Shift Management view, the admin clicks “Open Shop” to start a new shift. A confirmation dialog appears to prevent accidental opens. Confirming sends a request to the backend via a Next.js API route. The server creates a new `shift` record in the database and returns shift details. The dashboard then updates to show live statistics and switches the button label to “Close Shop.” When the admin is ready to end their shift, they click “Close Shop,” confirm in a dialog, and the system updates the existing shift record with an end timestamp. The dashboard refreshes and reverts to the pre-shift view.
 
-All authenticated pages reside under the `/dashboard` path. When the user attempts to navigate directly to `/dashboard` without a valid session, server-side redirection logic intercepts the request and sends the user back to the sign-in page. This ensures that protected content never shows to unauthorized visitors.
+### POS Interface Flow
 
-Signing out happens entirely on the client side by calling an API or clearing a cookie, then navigating back to the welcome page. The client code listens for the logout action, invalidates the current session, and then reloads or reroutes the application state to the landing interface.
+Selecting POS in the sidebar navigates to `/dashboard/pos`. The page uses a three-column layout on desktop: a category tab list on the left, a product grid in the center, and a shopping cart pane on the right. On mobile, the cart appears as a slide-up sheet. The admin taps a category name to filter the product grid. Products display name, price, and a button to add them to the cart. Tapping a product adds it to the cart state, which updates the cart pane with item quantities and totals.
+
+Inside the cart pane, the admin can adjust quantities or remove items. When ready to complete the sale, they tap “Pay,” which opens a payment dialog. The dialog collects payment type and confirms the total amount. On confirmation, the frontend posts the transaction data to an API route. The server creates a `transaction` record, links it to the active shift, and updates stock levels in the `products` table. After a successful response, the frontend opens a receipt dialog showing the sale summary and offering “Print” or “Email Receipt” actions. The cart then resets to empty.
+
+### Product Management Flow
+
+Clicking Products in the sidebar takes the admin to `/dashboard/products`. The page displays a data table listing each product’s name, category, price, and stock level. An “Add Product” button opens a dialog containing a form for name, category selection, price, stock quantity, and optional option groups. Submitting the form sends a POST request to `/api/products`, and upon success the table reloads to show the new product. Editing a product is done by clicking an action on a row, which opens the same dialog pre-filled with the product’s details. After saving, the updated product appears in the table. Deleting a product triggers a confirmation dialog and, once confirmed, sends a DELETE request to the API before removing the product from the list.
+
+### Category Management Flow
+
+The Categories page at `/dashboard/categories` shows a table of product category names. An “Add Category” dialog collects the category name and color (if applicable). Saving calls the categories API, and the new category appears in the table. Editing and deleting follow the same pattern of dialogs, confirmations, and API calls.
+
+### Option Group Management Flow
+
+On the Options page at `/dashboard/options`, the admin manages option groups such as sizes or add-ons. A data table lists each group and its options. An “Add Option Group” dialog allows entry of the group name and its options. Editing and deleting option groups use corresponding dialogs and API calls, and changes immediately refresh the table.
+
+### Reports Flow
+
+Visiting `/dashboard/reports` displays historical shift data in a table. The admin can select a date range to filter the list of past shifts. Clicking a shift row navigates to a shift detail view, which breaks down that shift’s transactions and totals using charts and tables.
+
+### Transaction History Flow
+
+The Transactions page at `/dashboard/transactions` lists every transaction across all shifts. Each row shows the transaction ID, timestamp, amount, and linked shift. A search field and date filter help find specific transactions. Selecting a transaction opens a detail view with the full receipt, item breakdown, and options to reprint or email the receipt again.
 
 ## Settings and Account Management
 
-At present, users cannot change profile information, update their email, or configure notifications from within the interface. The only account management available is the ability to sign out from any dashboard view. In future iterations, a dedicated settings page could be added to let users update personal details or adjust preferences, but in this version, those capabilities are not provided. After signing out, users always return to the welcome page and must sign in again to regain access to the dashboard.
+The profile menu in the header grants access to the Settings page at `/dashboard/settings`. Here the admin can update personal information such as email and display name. A change password section prompts for the current password and new password, submitting to the Supabase Auth API. A notification section lets the admin toggle alerts for low-stock warnings. The theme switch in the header persists the admin’s choice of dark or light mode. Saving settings returns the admin to the last visited dashboard module.
 
 ## Error States and Alternate Paths
 
-If a user types an incorrect email or password on the sign-in page, the authentication API responds with an error status and a message. The form then displays an inline alert near the input fields explaining the issue, such as “Invalid email or password,” allowing the user to correct and resubmit. During sign up, validation errors like a missing field or weak password appear immediately under the relevant input.
-
-Network failures trigger a generic error notification at the top of the form, informing the user that the request could not be completed and advising them to check their connection. If the dashboard content fails to load due to a broken or missing static data file, a fallback message appears in the main panel stating that data could not be loaded and suggesting a page refresh. Trying to access a protected route without a session sends the user to the sign-in page automatically, making it clear that authentication is required.
+If the admin enters incorrect credentials on sign-in, an error message appears above the form explaining that the email or password is invalid. On the password reset page, entering an unrecognized email triggers a message stating that no account matches that address. Form-level validation in any dialog highlights missing or invalid fields in red, with inline text explaining the correction needed. When the network is unavailable, a persistent banner alerts the admin and prevents data modifications. During offline operation in the POS interface, attempted transactions are queued locally in IndexedDB and a retry process runs once connectivity is restored. If an API call fails due to a server error, a modal dialog informs the admin of the failure and suggests retrying or contacting support. Actions that would violate data integrity such as deleting a category still used by products are blocked with a clear warning about the existing dependency.
 
 ## Conclusion and Overall App Journey
 
-A typical user journey starts with visiting the application’s root URL, signing up with an email and password, then being welcomed in the dashboard area that displays sample data. Returning users go directly through the sign-in page to the dashboard. Throughout each step, clear messages guide the user in case of errors or invalid input. The layout remains consistent, with a header and navigation ensuring that users always know where they are and can sign out at any time. This flow lays the foundation for adding dynamic data, user profile management, and richer features in future releases.
+From the moment the admin lands on the app and registers their account, the flow leads them into a cohesive dashboard where every core action is accessible from the sidebar. They manage shifts in real time, ring up sales through a responsive POS interface, handle products, categories, and options with intuitive dialogs, and review historical performance in reports and transaction history. Account settings and theme preferences are always just one click away in the header. Robust error handling and offline support ensure the application remains reliable under all conditions. This end-to-end journey equips the admin to open shop, process sales, and close shifts with confidence and clarity every day.

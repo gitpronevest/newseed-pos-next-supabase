@@ -1,117 +1,124 @@
-# Project Requirements Document: codeguide-starter
-
----
+# Project Requirements Document (PRD)
 
 ## 1. Project Overview
 
-The **codeguide-starter** project is a boilerplate web application that provides a ready-made foundation for any web project requiring secure user authentication and a post-login dashboard. It sets up the common building blocks—sign-up and sign-in pages, API routes to handle registration and login, and a simple dashboard interface driven by static data. By delivering this skeleton, it accelerates development time and ensures best practices are in place from day one.
+Newseed POS v2 is a modern, full-stack Point of Sale (POS) system built on top of a ready-made starter template (`newseed-pos-next-supabase`). It gives a single admin user a secure login, real-time shift management, product catalog management, and a responsive checkout interface. The codebase uses Next.js, TypeScript, Supabase, Drizzle ORM, Tailwind CSS, and shadcn/ui to deliver a fast, reliable foundation so your team can focus on business features instead of boilerplate setup.
 
-This starter kit is being built to solve the friction developers face when setting up repeated common tasks: credential handling, session management, page routing, and theming. Key objectives include: 1) delivering a fully working authentication flow (registration & login), 2) providing a gated dashboard area upon successful login, 3) establishing a clear, maintainable project structure using Next.js and TypeScript, and 4) demonstrating a clean theming approach with global and section-specific CSS. Success is measured by having an end-to-end login journey in under 200 lines of code and zero runtime type errors.
+We’re building this to accelerate development of Newseed POS v2 and ensure production-grade quality from day one. Key objectives include:
+- Secure admin authentication with Supabase Auth.
+- An "Open/Close Shift" dashboard that shows live sales stats.
+- Full CRUD (Create-Read-Update-Delete) for products, categories, and option groups.
+- A mobile-first POS interface with cart, payment dialog, and receipt generation.
+- Basic Progressive Web App (PWA) features and offline transaction queuing.
 
----
+Success will be measured by a working v1 prototype where the admin can log in, manage their catalog, open/close shifts, process transactions, and view sales—all on desktop or mobile—within a Dockerized development environment.
 
 ## 2. In-Scope vs. Out-of-Scope
 
-### In-Scope (Version 1)
-- User registration (sign-up) form with validation
-- User login (sign-in) form with validation
-- Next.js API routes under `/api/auth/route.ts` handling:
-  - Credential validation
-  - Password hashing (e.g., bcrypt)
-  - Session creation or JWT issuance
-- Protected dashboard pages under `/dashboard`:
-  - `layout.tsx` wrapping dashboard content
-  - `page.tsx` rendering static data from `data.json`
-- Global application layout in `/app/layout.tsx`
-- Basic styling via `globals.css` and `dashboard/theme.css`
-- TypeScript strict mode enabled
+**In-Scope (v1)**
+- Admin authentication using Supabase Auth (email/password).
+- Shift management dashboard with "Open Shift" and "Close Shift" buttons.
+- Real-time statistics display (charts and tables) for the active shift.
+- CRUD pages for Product Categories, Option Groups, and Products.
+- POS interface under `/app/dashboard/pos` with:
+  - Category tabs to filter products.
+  - Shopping cart component with quantity and add-on selection.
+  - Payment dialog (modal) and transaction endpoint.
+  - Receipt view or print dialog.
+- Drizzle ORM schemas and migrations for PostgreSQL (via Supabase).
+- Responsive, mobile-first UI using Tailwind CSS and shadcn/ui components.
+- Basic PWA setup (service worker registration, manifest file).
+- Dockerized local environment, deployment scaffolding for Vercel.
 
-### Out-of-Scope (Later Phases)
-- Integration with a real database (PostgreSQL, MongoDB, etc.)
-- Advanced authentication flows (password reset, email verification, MFA)
-- Role-based access control (RBAC)
-- Multi-tenant or white-label theming
-- Unit, integration, or end-to-end testing suites
-- CI/CD pipeline and production deployment scripts
-
----
+**Out-of-Scope (v1)**
+- Multi-user roles and permissions beyond a single admin.
+- Integration with external payment gateways (e.g., Stripe) beyond a mock or basic flow.
+- Advanced analytics or reporting beyond shift history.
+- Hardware integrations (barcode scanners, receipt printers).
+- Full offline conflict resolution (only basic queuing).
+- Multi-language support or deep localization.
 
 ## 3. User Flow
 
-A new visitor lands on the root URL and sees a welcome page with options to **Sign Up** or **Sign In**. If they choose Sign Up, they fill in their email, password, and hit “Create Account.” The form submits to `/api/auth/route.ts`, which hashes the password, creates a new user session or token, and redirects them to the dashboard. If any input is invalid, an inline error message explains the issue (e.g., “Password too short”).
+When an admin arrives, they land on the sign-in page. After entering their email and password, Supabase Auth verifies credentials. Once logged in, the admin sees the main dashboard layout: a sidebar for navigation (Shifts, POS, Products, Categories, Options, Reports) and a top header with logout and theme toggle. On the Shifts page, they can open a new shift, see live sales totals and transaction count in real time, then close the shift to finalize totals.
 
-Once authenticated, the user is taken to the `/dashboard` route. Here they see a sidebar or header defined by `dashboard/layout.tsx`, and the main panel pulls in static data from `data.json`. They can log out (if that control is present), but otherwise their entire session is managed by server-side cookies or tokens. Returning users go directly to Sign In, submit credentials, and upon success they land back on `/dashboard`. Any unauthorized access to `/dashboard` redirects back to Sign In.
-
----
+To manage the catalog, the admin clicks "Products" or "Categories" in the sidebar. They see a data table listing existing items with buttons to add, edit, or delete entries via a modal form. When ready to sell, they switch to the POS page. Products load in a grid filtered by category tabs; tapping a product adds it to the cart pane (on desktop) or opens a slide-up sheet (on mobile). The admin adjusts quantities or options, taps "Pay," completes the purchase in a dialog, and views/prints the receipt. All transactions are saved to the current shift and can be reviewed later in the "Reports" section.
 
 ## 4. Core Features
 
-- **Sign-Up Page (`/app/sign-up/page.tsx`)**: Form fields for email & password, client-side validation, POST to `/api/auth`.
-- **Sign-In Page (`/app/sign-in/page.tsx`)**: Form fields for email & password, client-side validation, POST to `/api/auth`.
-- **Authentication API (`/app/api/auth/route.ts`)**: Handles both registration and login based on HTTP method, integrates password hashing (bcrypt) and session or JWT logic.
-- **Global Layout (`/app/layout.tsx` + `globals.css`)**: Shared header, footer, and CSS resets across all pages.
-- **Dashboard Layout (`/app/dashboard/layout.tsx` + `dashboard/theme.css`)**: Sidebar or top nav for authenticated flows, section-specific styling.
-- **Dashboard Page (`/app/dashboard/page.tsx`)**: Reads `data.json`, renders it as cards or tables.
-- **Static Data Source (`/app/dashboard/data.json`)**: Example dataset to demo dynamic rendering.
-- **TypeScript Configuration**: `tsconfig.json` with strict mode and path aliases (if any).
-
----
+- **Authentication & Session Management**: Secure admin sign-in/out with Supabase.
+- **Shift Management**: Open/close shift buttons, current shift status, live stats (sales total, transaction count).
+- **Dashboard Charts & Tables**: Real-time data visualization for shifts and overall sales.
+- **Product Catalog**: CRUD pages for Product Categories, Products, and Option Groups using shadcn/ui `Table`, `Dialog`, `Form`.
+- **POS Interface**: Responsive three-column layout (categories, product grid, cart), mobile slide-up cart (using `Sheet`).
+- **Shopping Cart Logic**: Add/remove items, select add-ons, calculate totals.
+- **Payment Flow**: Modal dialog to confirm payment, trigger API route, record transaction, decrement stock.
+- **Receipt Generation**: Render printable receipt view after transaction.
+- **Database Layer**: Drizzle ORM schemas for `shifts`, `products`, `categories`, `options`, `transactions`.
+- **Theming**: Dark/light mode toggle.
+- **PWA & Offline**: Basic service worker, manifest, queue transactions in IndexedDB when offline.
+- **Containerization & Deployment**: Docker Compose for local dev, Vercel deployment boilerplate.
 
 ## 5. Tech Stack & Tools
 
-- **Framework**: Next.js (App Router) for file-based routing, SSR/SSG, and API routes.
-- **Language**: TypeScript for type safety.
-- **UI Library**: React 18 for component-based UI.
-- **Styling**: Plain CSS via `globals.css` (global reset) and `theme.css` (sectional styling). Can easily migrate to CSS Modules or Tailwind in the future.
-- **Backend**: Node.js runtime provided by Next.js API routes.
-- **Password Hashing**: bcrypt (npm package).
-- **Session/JWT**: NextAuth.js or custom JWT logic (to be decided in implementation).
-- **IDE & Dev Tools**: VS Code with ESLint, Prettier extensions. Optionally, Cursor.ai for AI-assisted coding.
-
----
+- **Frontend**
+  - Next.js (App Router)
+  - React 19
+  - TypeScript
+  - Tailwind CSS
+  - shadcn/ui (prebuilt accessible components)
+- **Backend & Data**
+  - Next.js API Routes
+  - Supabase Auth (email/password)
+  - Supabase PostgreSQL
+  - Drizzle ORM (TypeScript-first ORM)
+- **PWA & Offline**
+  - Service Worker (Workbox or manual)
+  - IndexedDB for offline queuing
+- **Dev & Deployment**
+  - Docker & Docker Compose
+  - Vercel (production hosting)
+- **Testing (future)**
+  - Vitest or Jest for unit tests
+  - Playwright or Cypress for E2E tests
 
 ## 6. Non-Functional Requirements
 
-- **Performance**: Initial page load under 200 ms on a standard broadband connection. API responses under 300 ms.
-- **Security**:
+- **Performance**: 
+  - Initial page load under 2 seconds (cold start).
+  - API responses under 200 ms.
+  - Real-time updates reflect within 1 second.
+- **Security**: 
   - HTTPS only in production.
-  - Proper CORS, CSRF protection for API routes.
-  - Secure password storage (bcrypt with salt).
-  - No credentials or secrets checked into version control.
-- **Scalability**: Structure must support adding database integration, caching layers, and advanced auth flows without rewiring core app.
-- **Usability**: Forms should give real-time feedback on invalid input. Layout must be responsive (mobile > 320 px).
-- **Maintainability**: Code must adhere to TypeScript strict mode. Linting & formatting enforced by ESLint/Prettier.
-
----
+  - Protect API routes via session checks.
+  - Secure storage of env vars (`.env.local`).
+  - OWASP Top 10 guidance for web apps.
+- **Usability & Accessibility**:
+  - WCAG 2.1 AA compliance for key flows.
+  - Responsive breakpoints for desktop, tablet, and mobile.
+- **Compliance**:
+  - GDPR-ready (no personal data beyond admin email).
+- **Reliability**:
+  - Service worker correctly caches static assets.
+  - Offline queue persistence across reloads.
 
 ## 7. Constraints & Assumptions
 
-- **No Database**: Dashboard uses only `data.json`; real database integration is deferred.
-- **Node Version**: Requires Node.js >= 14.
-- **Next.js Version**: Built on Next.js 13+ App Router.
-- **Authentication**: Assumes availability of bcrypt or NextAuth.js at implementation time.
-- **Hosting**: Targets serverless or Node.js-capable hosting (e.g., Vercel, Netlify).
-- **Browser Support**: Modern evergreen browsers; no IE11 support required.
-
----
+- Supabase project and credentials are available.
+- Only one admin user role is required for v1.
+- Next.js App Router and TypeScript v5+ are used.
+- Developers will run via Docker Compose (Postgres + app).
+- Network may drop; offline queuing should simply store and retry.
+- No external payment gateway integration in v1.
 
 ## 8. Known Issues & Potential Pitfalls
 
-- **Static Data Limitation**: `data.json` is only for demo. A real API or database will be needed to avoid stale data.
-  *Mitigation*: Define a clear interface for data fetching so swapping to a live endpoint is trivial.
-
-- **Global CSS Conflicts**: Using global styles can lead to unintended overrides.
-  *Mitigation*: Plan to migrate to CSS Modules or utility-first CSS in Phase 2.
-
-- **API Route Ambiguity**: Single `/api/auth/route.ts` handling both sign-up and sign-in could get complex.
-  *Mitigation*: Clearly branch on HTTP method (`POST /register` vs. `POST /login`) or split into separate files.
-
-- **Lack of Testing**: No test suite means regressions can slip in.
-  *Mitigation*: Build a minimal Jest + React Testing Library setup in an early iteration.
-
-- **Error Handling Gaps**: Client and server must handle edge cases (network failures, malformed input).
-  *Mitigation*: Define a standard error response schema and show user-friendly messages.
+- **API Rate Limits**: Supabase may throttle heavy traffic—use exponential backoff or batching.
+- **Offline Sync Complexity**: Queued transactions might conflict if shifts close offline—limit offline to active shift only.
+- **Drizzle Migrations**: Schema changes require manual migration scripts—document versioning carefully.
+- **Service Worker Scope**: Misconfigured scope may break navigation—test PWA routes thoroughly.
+- **State Management**: Cart logic can get complex—consider a lightweight store (Zustand) if React state grows unwieldy.
 
 ---
 
-This PRD should serve as the single source of truth for the AI model or any developer generating the next set of technical documents: Tech Stack Doc, Frontend Guidelines, Backend Structure, App Flow, File Structure, and IDE Rules. It contains all functional and non-functional requirements with no ambiguity, enabling seamless downstream development.
+This PRD lays out a clear, detailed roadmap for an AI or development team to implement Newseed POS v2 with no missing info. All subsequent technical docs can reference these sections for APIs, UI guidelines, and deployment steps.

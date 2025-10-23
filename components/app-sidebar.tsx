@@ -5,20 +5,17 @@ import Link from "next/link"
 import Image from "next/image"
 import { useSession } from "@/lib/auth-client"
 import {
-  IconCamera,
-  IconChartBar,
+  IconShoppingCart,
+  IconPackage,
+  IconCategory,
+  IconReportMoney,
   IconDashboard,
-  IconDatabase,
-  IconFileAi,
-  IconFileDescription,
-  IconFileWord,
-  IconFolder,
-  IconHelp,
-  IconListDetails,
-  IconReport,
-  IconSearch,
+  IconReceipt,
   IconSettings,
+  IconHelp,
+  IconSearch,
   IconUsers,
+  IconTrendingUp,
 } from "@tabler/icons-react"
 
 import { NavDocuments } from "@/components/nav-documents"
@@ -39,112 +36,49 @@ const staticData = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/admin",
       icon: IconDashboard,
     },
     {
-      title: "Lifecycle",
-      url: "#",
-      icon: IconListDetails,
+      title: "POS",
+      url: "/admin/pos",
+      icon: IconShoppingCart,
     },
     {
-      title: "Analytics",
-      url: "#",
-      icon: IconChartBar,
+      title: "Products",
+      url: "/admin/products",
+      icon: IconPackage,
     },
     {
-      title: "Projects",
-      url: "#",
-      icon: IconFolder,
+      title: "Categories",
+      url: "/admin/categories",
+      icon: IconCategory,
     },
     {
-      title: "Team",
-      url: "#",
-      icon: IconUsers,
-    },
-  ],
-  navClouds: [
-    {
-      title: "Capture",
-      icon: IconCamera,
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Proposal",
-      icon: IconFileDescription,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: IconFileAi,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
+      title: "Options",
+      url: "/admin/options",
       icon: IconSettings,
     },
+  ],
+  navClouds: [],
+  navSecondary: [
     {
-      title: "Get Help",
-      url: "#",
-      icon: IconHelp,
+      title: "Reports",
+      url: "/admin/reports",
+      icon: IconReportMoney,
     },
     {
-      title: "Search",
-      url: "#",
-      icon: IconSearch,
+      title: "Transactions",
+      url: "/admin/transactions",
+      icon: IconReceipt,
+    },
+    {
+      title: "Settings",
+      url: "/admin/settings",
+      icon: IconSettings,
     },
   ],
-  documents: [
-    {
-      name: "Data Library",
-      url: "#",
-      icon: IconDatabase,
-    },
-    {
-      name: "Reports",
-      url: "#",
-      icon: IconReport,
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: IconFileWord,
-    },
-  ],
+  documents: [],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -169,9 +103,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <Link href="/">
-                <Image src="/codeguide-logo.png" alt="CodeGuide" width={32} height={32} className="rounded-lg" />
-                <span className="text-base font-semibold font-parkinsans">CodeGuide</span>
+              <Link href="/admin">
+                <Image src="/codeguide-logo.png" alt="Newseed POS" width={32} height={32} className="rounded-lg" />
+                <span className="text-base font-semibold font-parkinsans">Newseed POS</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
