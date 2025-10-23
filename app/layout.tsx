@@ -19,9 +19,9 @@ const parkinsans = Parkinsans({
 });
 
 export const metadata: Metadata = {
-  title: "Codeguide Starter Fullstack",
+  title: "Newseed POS - Point of Sale System",
   description:
-    "A modern Next.js starter with TypeScript, TailwindCSS, shadcn/ui, Better Auth, and Drizzle ORM",
+    "A modern Point of Sale system built with Next.js, TypeScript, TailwindCSS, shadcn/ui, Better Auth, and Drizzle ORM",
 };
 
 export default function RootLayout({

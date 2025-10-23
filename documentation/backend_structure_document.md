@@ -1,179 +1,206 @@
-# Backend Structure Document
-
-This document outlines the backend architecture, hosting, and infrastructure for the **codeguide-starter** project. It uses plain language so anyone can understand how the backend is set up and how it supports the application.
+# newseed-pos-next-supabase Backend Structure Document
 
 ## 1. Backend Architecture
 
-- **Framework and Design Pattern**
-  - We use **Next.js API Routes** to handle all server-side logic. These routes live alongside the frontend code in the same repository, making development and deployment simpler.
-  - The backend follows a **layered pattern**:
-    1. **API Layer**: Receives requests (login, registration, data fetch).  
-    2. **Service Layer**: Contains the core business logic (user validation, password hashing).  
-    3. **Data Access Layer**: Talks to the database via a simple ORM (e.g., Prisma or TypeORM).
+The backend is built on a serverless, modular design that makes it easy to maintain, scale, and deliver fast responses.
 
-- **Scalability**
-  - Stateless API routes can scale horizontally—new instances can spin up on demand.  
-  - We can add caching or a message queue (e.g., Redis or RabbitMQ) without changing the core code.
+- **Next.js App Router & API Routes**: Each API endpoint lives alongside your pages, keeping server-side logic organized in the `app/api/` directory. Next.js deploys these as on-demand serverless functions.
+- **Drizzle ORM**: A type-safe layer that maps TypeScript definitions to PostgreSQL tables. This keeps database code predictable and free of low-level SQL bugs.
+- **Supabase Services**: Manages authentication, database hosting, and real-time updates, so you don’t have to run your own servers.
 
-- **Maintainability**
-  - Code for each feature is grouped by route (authentication, dashboard).  
-  - A service layer separates complex logic from request handling.
-
-- **Performance**
-  - Lightweight Node.js handlers keep response times low.  
-  - Future use of database connection pooling and Redis for caching repeated queries.
+How it supports key goals:
+- **Scalability**: Serverless functions auto-scale on Vercel. Supabase’s managed Postgres scales as your data grows.
+- **Maintainability**: Co-located routes, clear folder structure (`app/`, `db/`, `lib/`, `components/`), and TypeScript everywhere reduce confusion.
+- **Performance**: Edge network on Vercel plus caching strategies (Next.js incremental cache, SWR on the client) deliver content quickly worldwide.
 
 ## 2. Database Management
 
-- **Database Choice**
-  - We recommend **PostgreSQL** for structured data and reliable transactions.  
-  - In-memory caching can be added later with **Redis** for session tokens or frequently read data.
+We use a relational database approach for reliable, structured data handling.
 
-- **Data Storage and Access**
-  - Use an ORM like **Prisma** or **TypeORM** to map JavaScript/TypeScript objects to database tables.
-  - Connection pooling ensures efficient use of database connections under load.
-  - Migrations track schema changes over time, keeping development, staging, and production in sync.
-
-- **Data Practices**
-  - Passwords are never stored in plain text—they are salted and hashed with **bcrypt** before saving.
-  - All outgoing data is typed and validated to prevent malformed records.
+- Database Technology:
+  - PostgreSQL (managed by Supabase)
+  - Accessed via Drizzle ORM in TypeScript
+- Data Structure & Practices:
+  - Tables for users, shifts, categories, products, options, and transactions
+  - Foreign key constraints enforce relationships (for example, each transaction ties to a shift)
+  - Migrations and version control: Drizzle schema files live under `db/schema/`, making changes traceable
+  - Backups & restore: Supabase auto-schedules daily backups with point-in-time recovery
 
 ## 3. Database Schema
 
-### Human-Readable Format
+Below is a high-level, human-readable view of each table, followed by the SQL definitions.
 
-- **Users**
-  - **id**: Unique identifier  
-  - **email**: User’s email address (unique)  
-  - **password_hash**: Securely hashed password  
-  - **created_at**: Account creation timestamp
+Tables and relationships:
+- **users**: Stores the single admin user (email, hashed password)
+- **shifts**: Tracks open/close times and totals for each work session
+- **product_categories**: Groups products (e.g., "Beverages", "Snacks")
+- **option_groups**: Logical collections of add-ons (e.g., "Milk Types")
+- **options**: Individual add-ons linked to an option group (e.g., "Almond Milk")
+- **products**: Items for sale with price, stock, category, and associated option groups
+- **transactions**: Individual sales records linked to a shift and containing totals
 
-- **Sessions**
-  - **id**: Unique session record  
-  - **user_id**: Links to a user  
-  - **token**: Random string for authentication  
-  - **expires_at**: When the token stops working  
-  - **created_at**: When the session was created
-
-- **DashboardItems** *(optional for dynamic data)*
-  - **id**: Unique record  
-  - **title**: Item title  
-  - **content**: Item details  
-  - **created_at**: When the item was added
-
-### SQL Schema (PostgreSQL)
+SQL definition (PostgreSQL):
 ```sql
--- Users table
+-- users table (single admin)
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Sessions table
-CREATE TABLE sessions (
+-- shifts table
+CREATE TABLE shifts (
   id SERIAL PRIMARY KEY,
-  user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  token VARCHAR(255) UNIQUE NOT NULL,
-  expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  started_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  ended_at TIMESTAMP WITH TIME ZONE,
+  total_amount DECIMAL(10,2) DEFAULT 0
 );
 
--- Dashboard items table
-CREATE TABLE dashboard_items (
+-- product_categories table
+CREATE TABLE product_categories (
   id SERIAL PRIMARY KEY,
-  title TEXT NOT NULL,
-  content TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
+  name TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-```  
+
+-- option_groups table
+CREATE TABLE option_groups (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- options table (add-ons)
+CREATE TABLE options (
+  id SERIAL PRIMARY KEY,
+  group_id INTEGER NOT NULL REFERENCES option_groups(id),
+  name TEXT NOT NULL,
+  price_adjustment DECIMAL(10,2) DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- products table
+CREATE TABLE products (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  stock INTEGER DEFAULT 0,
+  category_id INTEGER REFERENCES product_categories(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- transactions table
+CREATE TABLE transactions (
+  id SERIAL PRIMARY KEY,
+  shift_id INTEGER NOT NULL REFERENCES shifts(id),
+  total_amount DECIMAL(10,2) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
 
 ## 4. API Design and Endpoints
 
-- **Approach**: We follow a **RESTful** style, grouping related endpoints under `/api` directories.
+We follow a RESTful style using Next.js serverless routes. Each resource has standard CRUD operations.
 
-- **Key Endpoints**
-  - `POST /api/auth/register`  
-    • Accepts `{ email, password }`  
-    • Creates a new user and issues a session token  
-  - `POST /api/auth/login`  
-    • Accepts `{ email, password }`  
-    • Verifies credentials and returns a session token  
-  - `POST /api/auth/logout`  
-    • Invalidates the session token on the server  
-  - `GET /api/dashboard/data`  
-    • Requires a valid session  
-    • Returns user-specific data or dashboard items  
+Key endpoints:
+- **/api/auth/**
+  - POST /login: Verify admin credentials, return JWT
+  - POST /logout: Invalidate session
+- **/api/shifts/**
+  - POST /open: Start a new shift
+  - POST /close: End the current shift and calculate totals
+  - GET /: Fetch all shifts or the active shift
+- **/api/product_categories/**
+  - GET /: List categories
+  - POST /: Create a new category
+  - PUT /[id]: Update a category
+  - DELETE /[id]: Remove a category
+- **/api/products/**
+  - GET /: List products (with optional category filter)
+  - POST /: Create a new product
+  - PUT /[id]: Update product details
+  - DELETE /[id]: Delete a product
+- **/api/options/**
+  - GET /: List all option groups and options
+  - POST /option-groups/: Create new group
+  - POST /options/: Create new option
+  - PUT/DELETE similar to above
+- **/api/transactions/**
+  - POST /: Create a new sale, deduct stock, add to shift
+  - GET /: List all transactions or filter by shift
 
-- **Communication**
-  - Frontend sends JSON requests; backend replies with JSON and appropriate HTTP status codes.  
-  - Protected routes check for a valid session token (in cookies or Authorization header).
+Each route uses Drizzle ORM behind the scenes for type-safe queries and clear error handling.
 
 ## 5. Hosting Solutions
 
-- **Cloud Provider**:  
-  - **Vercel** (recommended) offers seamless Next.js deployments, auto-scaling, and built-in CDN.  
-  - Alternatively, **Netlify** or any Node.js-capable host will work.
+- **Vercel** (Frontend & API)
+  - Automatic deployments from GitHub
+  - Global edge network for low-latency responses
+  - Serverless functions for API routes that scale on demand
+- **Supabase** (Database & Auth)
+  - Managed PostgreSQL with daily backups and monitoring
+  - Built-in authentication and row-level security if needed
 
-- **Benefits**
-  - **Reliability**: Global servers and failover across regions.  
-  - **Scalability**: Auto-scale serverless functions based on traffic.  
-  - **Cost-Effectiveness**: Pay-per-use model means low cost for small projects.
+Benefits:
+- **Reliability**: Both platforms guarantee high uptime
+- **Scalability**: Serverless + managed DB auto-scale with usage
+- **Cost-effectiveness**: Generous free tiers, pay-as-you-go pricing
 
 ## 6. Infrastructure Components
 
-- **Load Balancer**
-  - Provided by the hosting platform—distributes API requests across function instances.
+- **Load Balancer & CDN**: Provided by Vercel’s global edge network
+- **Caching**:
+  - Next.js ISR (Incremental Static Regeneration) and SWR on the client for API data
+  - Service Worker (PWA) caches static assets for offline loading
+- **Containerization (Local Dev)**:
+  - Docker Compose setup for Next.js app and Supabase emulator ensures parity between local and production
+- **Content Delivery**:
+  - Static assets (CSS, JS) served from edge cache
 
-- **CDN (Content Delivery Network)**
-  - Vercel’s global edge network caches static assets (CSS, JS, images) for faster page loads.
-
-- **Caching**
-  - **Redis** (optional) for session storage or caching dashboard queries to reduce database load.
-
-- **Object Storage**
-  - For file uploads or backups, integrate with AWS S3 or similar services.
-
-- **Message Queue**
-  - In future, use **RabbitMQ** or **Kafka** for background tasks (e.g., email notifications).
+Together, these components ensure quick page loads, real-time updates, and offline resilience.
 
 ## 7. Security Measures
 
-- **Authentication & Authorization**
-  - Passwords hashed with **bcrypt** and salted.  
-  - Session tokens stored in secure, HttpOnly cookies or Authorization headers.  
-  - Protected endpoints verify tokens before proceeding.
-
-- **Data Encryption**
-  - **HTTPS/TLS** encrypts data in transit.  
-  - Database connections use SSL to encrypt data between the app and the database.
-
-- **Input Validation**
-  - Every incoming request is validated (e.g., valid email format, password length) to prevent SQL injection or other attacks.
-
-- **Web Security Best Practices**
-  - Enable **CORS** policies to limit allowed origins.  
-  - Use **CSRF tokens** or same-site cookies to prevent cross-site requests.  
-  - Set secure headers with **Helmet** or a similar middleware.
+- **Authentication & Authorization**:
+  - Supabase Auth with JWT tokens
+  - Single-admin role enforced at the API level
+- **Data Encryption**:
+  - TLS (HTTPS) in transit
+  - Encryption at rest on Supabase managed DB
+- **Environment Variables**:
+  - Secrets (API keys, DB URLs) stored in Vercel and `.env.local` files
+- **Input Validation & Error Handling**:
+  - Zod or built-in validation in API routes
+  - Clear error messages to the admin without leaking internal details
+- **Rate Limiting & Monitoring**:
+  - Basic rate limiting on critical endpoints (login, transactions)
+  - Alert on abnormal error spikes
 
 ## 8. Monitoring and Maintenance
 
-- **Performance Monitoring**
-  - Integrate **Sentry** or **LogRocket** for real-time crash reporting and performance tracing.  
-  - Use Vercel’s built-in analytics to track request latencies and error rates.
-
-- **Logging**
-  - Structured logs (JSON) for all API requests and errors, shipped to a log management service like **Datadog** or **Logflare**.
-
-- **Health Checks**
-  - Define a `/health` endpoint that returns a 200 status if the service is up and the database is reachable.
-
-- **Maintenance Strategies**
-  - Automated migrations run on deploy to keep the database schema up to date.  
-  - Scheduled dependency audits and security scans (e.g., `npm audit`).
-  - Regular backups of the database (daily or weekly depending on usage).
+- **Logging & Alerts**:
+  - Vercel analytics for serverless functions
+  - Supabase dashboard for DB performance metrics and logs
+  - Optional Sentry integration for uncaught exceptions
+- **Testing Strategy**:
+  - Unit tests (Vitest) for business logic
+  - Integration tests for API routes
+  - End-to-end tests (Playwright) for critical flows (open/close shift, checkout)
+- **Maintenance Practices**:
+  - Scheduled dependency updates via GitHub Actions
+  - Periodic backup checks
+  - Schema migration reviews before releases
 
 ## 9. Conclusion and Overall Backend Summary
 
-The backend for **codeguide-starter** is built on Next.js API Routes and Node.js, paired with PostgreSQL for data and optional Redis for caching. It follows a clear layered architecture that keeps code easy to maintain and extend. With RESTful endpoints for authentication and data, secure practices like password hashing and HTTPS, and hosting on Vercel for scalability and global performance, this setup meets the project’s goals for a fast, secure, and developer-friendly foundation. Future enhancements—such as background job queues, advanced monitoring, or richer data models—can be added without disrupting the core structure.
+This backend combines the power of Next.js serverless functions, Supabase’s managed Postgres & Auth, and Drizzle ORM’s type-safe data layer. It delivers a reliable, scalable foundation for the Newseed POS v2 project, handling everything from secure admin login and real-time dashboards to robust transaction management and offline support.
+
+Unique strengths:
+- End-to-end TypeScript safety
+- Modular folder structure for clear ownership of features
+- Instant scalability via serverless deployments
+- Managed infrastructure (Supabase & Vercel) minimizing ops overhead
+
+With this setup, developers can focus on building business features—like advanced shift analytics or enhanced PWA experiences—without worrying about the underlying backend complexity.
